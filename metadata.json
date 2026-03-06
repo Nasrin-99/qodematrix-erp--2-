@@ -1,0 +1,5 @@
+{
+  "name": "QodeMatrix ERP",
+  "description": "A comprehensive multi-tenant SaaS School ERP platform for managing multiple schools, students, teachers, and parents.",
+  "requestFramePermissions": []
+}
