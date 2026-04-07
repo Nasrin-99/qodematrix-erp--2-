@@ -1,120 +1,155 @@
-import React, { useState, useEffect } from 'react';
-import { Calendar, Search, CheckCircle2, XCircle, Clock, Save } from 'lucide-react';
-import { Card } from '../../components/ui/Card';
-import { Button } from '../../components/ui/Button';
-import { Table, TableRow, TableCell } from '../../components/ui/Table';
-import { Badge } from '../../components/ui/Badge';
-import { LoadingSpinner } from '../../components/ui/LoadingSpinner';
+import React, { useEffect, useState } from "react";
+import { Clock } from "lucide-react";
+import { Card } from "../../components/ui/Card";
+import { Badge } from "../../components/ui/Badge";
+import { LoadingSpinner } from "../../components/ui/LoadingSpinner";
+import { attendanceService } from "../../api/services";
 
 export const TeacherAttendance = () => {
-  const [students, setStudents] = useState<any[]>([]);
+  const [attendance, setAttendance] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedClass, setSelectedClass] = useState('10-A');
+
+  // 🔥 STATS
+  const [totalPresent, setTotalPresent] = useState(0);
+  const [totalAbsent, setTotalAbsent] = useState(0);
+  const [attendanceRate, setAttendanceRate] = useState(0);
+
+  // ================= FETCH =================
+  const fetchAttendance = async () => {
+    try {
+      const res = await attendanceService.getTeacherAttendance();
+      const records = res?.data || [];
+
+      console.log("📦 TEACHER ATT:", records);
+
+      // 🔥 FORMAT DATA
+      const formatted = records.map((item: any) => ({
+        id: item._id,
+        date: new Date(item.date).toISOString().split("T")[0],
+        status:
+          item.status === "present"
+            ? "Present"
+            : item.status === "absent"
+            ? "Absent"
+            : "Late",
+        time: item.slot || "-"
+      }));
+
+      setAttendance(formatted);
+
+      // 🔥 STATS CALCULATION
+      const present = formatted.filter((a: any) => a.status === "Present").length;
+      const absent = formatted.filter((a: any) => a.status === "Absent").length;
+
+      const total = formatted.length;
+      const rate = total > 0 ? Math.round((present / total) * 100) : 0;
+
+      setTotalPresent(present);
+      setTotalAbsent(absent);
+      setAttendanceRate(rate);
+
+    } catch (err) {
+      console.log(err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    // Mock data for students in a specific class for attendance marking
-    setTimeout(() => {
-      setStudents([
-        { id: '1', name: 'Alex Johnson', status: 'Present' },
-        { id: '2', name: 'Sarah Miller', status: 'Absent' },
-        { id: '3', name: 'James Wilson', status: 'Present' },
-        { id: '4', name: 'Emily Davis', status: 'Present' },
-        { id: '5', name: 'Michael Brown', status: 'Late' },
-        { id: '6', name: 'Jessica Taylor', status: 'Present' },
-        { id: '7', name: 'David Lee', status: 'Present' },
-      ]);
-      setIsLoading(false);
-    }, 800);
-  }, [selectedClass]);
-
-  const handleStatusChange = (id: string, status: string) => {
-    setStudents(prev => prev.map(s => s.id === id ? { ...s, status } : s));
-  };
+    fetchAttendance();
+  }, []);
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">Mark Attendance</h1>
-          <p className="text-slate-500">Record daily attendance for your assigned classes.</p>
-        </div>
-        <Button className="gap-2">
-          <Save size={18} /> Save Attendance
-        </Button>
+
+      {/* HEADER */}
+      <div>
+        <h1 className="text-2xl font-bold text-slate-900">My Attendance</h1>
+        <p className="text-slate-500">Track your attendance records and history.</p>
       </div>
 
-      <div className="flex flex-wrap gap-4 items-center justify-between">
-        <div className="flex gap-4">
-          <select 
-            className="h-10 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            value={selectedClass}
-            onChange={(e) => setSelectedClass(e.target.value)}
-          >
-            <option value="10-A">Class 10-A (Mathematics)</option>
-            <option value="12-B">Class 12-B (Physics)</option>
-            <option value="9-C">Class 9-C (Mathematics)</option>
-          </select>
-          <div className="h-10 px-4 rounded-lg bg-slate-100 flex items-center gap-2 text-sm font-medium text-slate-600">
-            <Calendar size={16} /> {new Date().toLocaleDateString()}
-          </div>
-        </div>
-        
-        <div className="flex gap-2">
-          <Badge variant="success" className="px-3 py-1">Present: {students.filter(s => s.status === 'Present').length}</Badge>
-          <Badge variant="danger" className="px-3 py-1">Absent: {students.filter(s => s.status === 'Absent').length}</Badge>
-          <Badge variant="warning" className="px-3 py-1">Late: {students.filter(s => s.status === 'Late').length}</Badge>
-        </div>
+      {/* 🔥 STATS CARDS */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+        <Card className="p-5 border-l-4 border-emerald-500">
+          <p className="text-xs font-semibold text-slate-500 uppercase">
+            Attendance Rate
+          </p>
+          <h3 className="text-3xl font-bold mt-2">
+            {attendanceRate}%
+          </h3>
+        </Card>
+
+        <Card className="p-5 border-l-4 border-indigo-500">
+          <p className="text-xs font-semibold text-slate-500 uppercase">
+            Total Present
+          </p>
+          <h3 className="text-3xl font-bold mt-2">
+            {totalPresent}
+          </h3>
+        </Card>
+
+        <Card className="p-5 border-l-4 border-red-500">
+          <p className="text-xs font-semibold text-slate-500 uppercase">
+            Total Absent
+          </p>
+          <h3 className="text-3xl font-bold mt-2">
+            {totalAbsent}
+          </h3>
+        </Card>
+
       </div>
 
+      {/* 🔥 LIST STYLE (Student jaisa UI) */}
       <Card className="p-0 overflow-hidden">
+
         {isLoading ? (
           <LoadingSpinner />
+        ) : attendance.length === 0 ? (
+          <div className="p-6 text-center text-gray-400">
+            No attendance data found
+          </div>
         ) : (
-          <Table headers={['Student Name', 'Status', 'Actions']}>
-            {students.map((student) => (
-              <TableRow key={student.id}>
-                <TableCell className="font-medium text-slate-900">{student.name}</TableCell>
-                <TableCell>
-                  <Badge variant={
-                    student.status === 'Present' ? 'success' : 
-                    student.status === 'Absent' ? 'danger' : 'warning'
-                  }>
-                    {student.status}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  <div className="flex items-center gap-2">
-                    <Button 
-                      variant={student.status === 'Present' ? 'default' : 'outline'} 
-                      size="sm" 
-                      className={student.status === 'Present' ? 'bg-emerald-600 hover:bg-emerald-700' : 'text-emerald-600 border-emerald-200 hover:bg-emerald-50'}
-                      onClick={() => handleStatusChange(student.id, 'Present')}
-                    >
-                      Present
-                    </Button>
-                    <Button 
-                      variant={student.status === 'Absent' ? 'default' : 'outline'} 
-                      size="sm" 
-                      className={student.status === 'Absent' ? 'bg-red-600 hover:bg-red-700' : 'text-red-600 border-red-200 hover:bg-red-50'}
-                      onClick={() => handleStatusChange(student.id, 'Absent')}
-                    >
-                      Absent
-                    </Button>
-                    <Button 
-                      variant={student.status === 'Late' ? 'default' : 'outline'} 
-                      size="sm" 
-                      className={student.status === 'Late' ? 'bg-amber-600 hover:bg-amber-700' : 'text-amber-600 border-amber-200 hover:bg-amber-50'}
-                      onClick={() => handleStatusChange(student.id, 'Late')}
-                    >
-                      Late
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
+          <div>
+
+            {/* HEADER */}
+            <div className="grid grid-cols-3 bg-gray-50 px-6 py-3 text-sm font-semibold text-gray-600">
+              <span>Date</span>
+              <span>Status</span>
+              <span>Time</span>
+            </div>
+
+            {/* DATA */}
+            {attendance.map((record) => (
+              <div
+                key={record.id}
+                className="grid grid-cols-3 items-center px-6 py-4 border-t"
+              >
+                <span className="font-medium">{record.date}</span>
+
+                <Badge
+                  variant={
+                    record.status === "Present"
+                      ? "success"
+                      : record.status === "Absent"
+                      ? "danger"
+                      : "warning"
+                  }
+                >
+                  {record.status}
+                </Badge>
+
+                <div className="flex items-center gap-2 text-gray-500">
+                  <Clock size={14} />
+                  <span>{record.time}</span>
+                </div>
+              </div>
             ))}
-          </Table>
+
+          </div>
         )}
       </Card>
+
     </div>
   );
 };

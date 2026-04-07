@@ -1,63 +1,218 @@
 import React, { useState, useEffect } from 'react';
-import { BookOpen, Users, Clock, Search, FileText } from 'lucide-react';
+import { BookOpen } from 'lucide-react';
 import { Card } from '../../components/ui/Card';
 import { LoadingSpinner } from '../../components/ui/LoadingSpinner';
+import { getStudentClasses } from '../../api/services';
 
+
+
+
+// ✅ FIXED SORT
+const sortTimes = (times: string[]) => {
+  return times.sort((a, b) => {
+    const getMinutes = (t: string) => {
+      const [h, m] = t.split(" - ")[0].split(":").map(Number);
+      return h * 60 + m;
+    };
+    return getMinutes(a) - getMinutes(b);
+  });
+};
+
+// ✅ AM PM FORMAT
+const formatTime = (timeRange: string) => {
+  const [start, end] = timeRange.split(" - ");
+
+  const convert = (time: string) => {
+    let [hour, min] = time.split(":").map(Number);
+    const ampm = hour >= 12 ? "PM" : "AM";
+
+    hour = hour % 12;
+    if (hour === 0) hour = 12;
+
+    return `${hour.toString().padStart(2, "0")}:${min
+      .toString()
+      .padStart(2, "0")} ${ampm}`;
+  };
+
+  return `${convert(start)} - ${convert(end)}`;
+};
+
+// ===============================
+// 🔥 TIMETABLE
+// ===============================
+const Timetable = ({ routine, teachers }: any) => {
+
+  const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+  // ✅ FIXED TEACHER MATCH
+  const getTeacherName = (day: string, time: string, subject: string) => {
+    for (const teacher of teachers) {
+      for (const assign of teacher.assignments || []) {
+        for (const slot of assign.slots || []) {
+
+          const dbSubject = slot.subject?.toLowerCase().trim();
+          const uiSubject = subject?.toLowerCase().trim();
+
+          if (
+            slot.day === day &&
+            slot.time === time &&
+            dbSubject === uiSubject
+          ) {
+            return teacher.name;
+          }
+        }
+      }
+    }
+    return null;
+  };
+
+  // ✅ FIXED TIME SORT
+  const timeSlots = sortTimes(
+    Array.from(
+      new Set(
+        days.flatMap(day => Object.keys(routine?.[day] || {}))
+      )
+    )
+  );
+
+  return (
+    <div className="overflow-x-auto mt-4">
+      <table className="w-full border border-gray-300 text-sm">
+
+        {/* HEADER */}
+        <thead className="bg-slate-100">
+          <tr>
+            <th className="border p-2 text-left">Day</th>
+            {timeSlots.map((time) => (
+              <th key={time} className="border p-2 text-center">
+                {time}
+              </th>
+            ))}
+          </tr>
+        </thead>
+
+        {/* BODY */}
+        <tbody>
+          {days.map((day) => (
+            <tr key={day}>
+              <td className="border p-2 font-semibold">{day}</td>
+
+              {timeSlots.map((time) => {
+                const slot = routine?.[day]?.[time];
+
+                const subject =
+                  typeof slot === "string"
+                    ? slot
+                    : slot?.subject || "";
+
+                const teacherName = getTeacherName(day, time, subject);
+
+                return (
+                  <td key={time} className="border p-2 text-center">
+
+                    {slot ? (
+                      <div>
+
+                        {/* SUBJECT */}
+                        <div className="font-semibold text-indigo-600">
+                          {subject.toUpperCase()}
+                        </div>
+
+                        {/* TEACHER */}
+                        {teacherName && (
+                          <div className="text-xs text-gray-500">
+                            ({teacherName})
+                          </div>
+                        )}
+
+                      </div>
+                    ) : (
+                      <span className="text-gray-300">—</span>
+                    )}
+
+                  </td>
+                );
+              })}
+            </tr>
+          ))}
+        </tbody>
+
+      </table>
+    </div>
+  );
+};
+
+// ===============================
+// 🔥 MAIN
+// ===============================
 export const StudentClasses = () => {
+
   const [classes, setClasses] = useState<any[]>([]);
+  const [teachers, setTeachers] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Mock data for student's classes
-    setTimeout(() => {
-      setClasses([
-        { id: '1', name: 'English Literature', teacher: 'Ms. Sarah Wilson', room: 'Room 302', schedule: 'Mon, Wed, Fri • 08:30 AM' },
-        { id: '2', name: 'Advanced Mathematics', teacher: 'Mr. John Doe', room: 'Room 102', schedule: 'Mon, Wed, Fri • 10:00 AM' },
-        { id: '3', name: 'Chemistry', teacher: 'Dr. Emily Brown', room: 'Lab 2', schedule: 'Tue, Thu • 11:30 AM' },
-        { id: '4', name: 'History', teacher: 'Mr. Robert Smith', room: 'Room 204', schedule: 'Tue, Thu • 01:30 PM' },
-        { id: '5', name: 'Physical Education', teacher: 'Coach Mike', room: 'Gym', schedule: 'Wed • 02:00 PM' },
-      ]);
-      setIsLoading(false);
-    }, 800);
+    fetchClasses();
   }, []);
+
+  const fetchClasses = async () => {
+    try {
+      const res = await getStudentClasses();
+
+      setClasses(res.classData || []);
+      setTeachers(res.teachers || []);
+
+    } catch (error) {
+      console.log(error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">My Classes</h1>
-          <p className="text-slate-500">View your current class schedule and course details.</p>
-        </div>
+
+      <div>
+        <h1 className="text-2xl font-bold">My Classes</h1>
+        <p className="text-slate-500">
+          View your timetable with subjects and teachers.
+        </p>
       </div>
 
       {isLoading ? (
         <LoadingSpinner />
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {classes.map((cls) => (
-            <Card key={cls.id} className="hover:shadow-md transition-shadow">
-              <div className="p-6">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="h-12 w-12 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
-                    <BookOpen size={24} />
+        <div className="space-y-6">
+
+          {classes.length > 0 ? (
+            classes.map((cls: any) => (
+              <Card key={cls._id} className="p-6">
+
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="p-3 bg-indigo-50 text-indigo-600 rounded-xl">
+                    <BookOpen size={20} />
                   </div>
-                  <div className="px-2 py-1 rounded bg-slate-100 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                    {cls.room}
-                  </div>
+
+                  <h3 className="font-bold text-lg">
+                    Class {cls.name}-{cls.section}
+                  </h3>
                 </div>
-                
-                <h3 className="text-lg font-bold text-slate-900">{cls.name}</h3>
-                <p className="text-sm text-slate-500 mb-4">{cls.teacher}</p>
-                
-                <div className="flex items-center gap-2 text-sm text-slate-600 pt-4 border-t border-slate-100">
-                  <Clock size={16} className="text-slate-400" />
-                  <span>{cls.schedule}</span>
-                </div>
-              </div>
-            </Card>
-          ))}
+
+                <Timetable
+                  routine={cls.routine}
+                  teachers={teachers}
+                />
+
+              </Card>
+            ))
+          ) : (
+            <div className="text-center text-gray-400 py-10">
+              No classes found 📭
+            </div>
+          )}
+
         </div>
       )}
     </div>
   );
-};
+}

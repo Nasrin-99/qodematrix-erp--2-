@@ -1,94 +1,160 @@
-import React from 'react';
-import { HelpCircle, Mail, Phone, MessageSquare, FileText, ExternalLink } from 'lucide-react';
-import { Card } from '../../components/ui/Card';
-import { Button } from '../../components/ui/Button';
+import React, { useEffect, useState } from "react";
+import axios from "axios";
+import {
+Mail,
+Phone,
+MessageSquare,
+FileText,
+ExternalLink,
+} from "lucide-react";
+
+import { Card } from "../../components/ui/Card";
+import { Button } from "../../components/ui/Button";
+import { Input } from "../../components/ui/Input";
 
 export const HelpSupport = () => {
-  return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900">Help & Support</h1>
-        <p className="text-slate-500">Need assistance? We're here to help you with any issues or questions.</p>
-      </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="p-6 text-center space-y-4">
-          <div className="h-12 w-12 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto">
-            <Mail size={24} />
-          </div>
-          <div>
-            <h3 className="font-bold text-slate-900">Email Us</h3>
-            <p className="text-sm text-slate-500 mt-1">info@qodematrixtechsolutions.com</p>
-          </div>
-          <a href="mailto:info@qodematrixtechsolutions.com" className="w-full">
-            <Button variant="outline" size="sm" className="w-full">Send Email</Button>
-          </a>
-        </Card>
+const [faqs, setFaqs] = useState<any[]>([]);
+const [docs, setDocs] = useState<any[]>([]);
 
-        <Card className="p-6 text-center space-y-4">
-          <div className="h-12 w-12 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto">
-            <Phone size={24} />
-          </div>
-          <div>
-            <h3 className="font-bold text-slate-900">Call Us</h3>
-            <p className="text-sm text-slate-500 mt-1">8199824069</p>
-          </div>
-          <a href="tel:8199824069" className="w-full">
-            <Button variant="outline" size="sm" className="w-full">Call Now</Button>
-          </a>
-        </Card>
+const [message, setMessage] = useState("");
+const [loading, setLoading] = useState(false);
 
-        <Card className="p-6 text-center space-y-4">
-          <div className="h-12 w-12 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center mx-auto">
-            <MessageSquare size={24} />
-          </div>
-          <div>
-            <h3 className="font-bold text-slate-900">Live Chat</h3>
-            <p className="text-sm text-slate-500 mt-1">Available 9 AM - 6 PM</p>
-          </div>
-          <Button variant="outline" size="sm" className="w-full">Start Chat</Button>
-        </Card>
-      </div>
+const API = import.meta.env.VITE_API_URL;
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card title="Frequently Asked Questions">
-          <div className="space-y-4">
-            {[
-              { q: 'How do I reset my password?', a: 'You can reset your password from the Settings page under the Security tab.' },
-              { q: 'Where can I see my child\'s attendance?', a: 'Parents can view attendance from the "Child Attendance" link in the sidebar.' },
-              { q: 'How do I pay school fees online?', a: 'Go to the "My Fees" section and click on the "Pay Outstanding" button.' },
-              { q: 'Can I download my report card?', a: 'Yes, report cards are available in the "Exams" section once results are published.' },
-            ].map((faq, i) => (
-              <div key={i} className="space-y-1">
-                <h4 className="text-sm font-bold text-slate-900">{faq.q}</h4>
-                <p className="text-sm text-slate-500">{faq.a}</p>
-              </div>
-            ))}
-          </div>
-        </Card>
+// ===============================
+// FETCH FAQ + DOCS
+// ===============================
+useEffect(() => {
+const fetchData = async () => {
+try {
+const faqRes = await axios.get(`${API}/support/faqs`);
+const docRes = await axios.get(`${API}/support/docs`);
 
-        <Card title="Documentation & Guides">
-          <div className="space-y-4">
-            {[
-              { title: 'User Manual for Teachers', type: 'PDF', size: '2.4 MB' },
-              { title: 'Parent Portal Guide', type: 'PDF', size: '1.8 MB' },
-              { title: 'Student Handbook', type: 'PDF', size: '3.1 MB' },
-              { title: 'API Documentation', type: 'Link', size: 'External' },
-            ].map((doc, i) => (
-              <div key={i} className="flex items-center justify-between p-3 rounded-lg border border-slate-100 hover:bg-slate-50 transition-colors cursor-pointer group">
-                <div className="flex items-center gap-3">
-                  <FileText size={20} className="text-slate-400" />
-                  <div>
-                    <h4 className="text-sm font-semibold text-slate-900 group-hover:text-indigo-600 transition-colors">{doc.title}</h4>
-                    <p className="text-xs text-slate-500">{doc.type} • {doc.size}</p>
-                  </div>
-                </div>
-                <ExternalLink size={16} className="text-slate-300 group-hover:text-indigo-400 transition-colors" />
-              </div>
-            ))}
-          </div>
-        </Card>
-      </div>
+
+    setFaqs(faqRes.data);
+    setDocs(docRes.data);
+
+  } catch (err) {
+    console.error("Support fetch error", err);
+  }
+};
+
+fetchData();
+
+
+}, []);
+
+// ===============================
+// SEND MESSAGE (SUPPORT TICKET)
+// ===============================
+const sendMessage = async () => {
+if (!message) return;
+
+
+try {
+  setLoading(true);
+
+  await axios.post(`${API}/support/ticket`, {
+    message,
+  });
+
+  setMessage("");
+  alert("Message sent successfully");
+
+} catch (err) {
+  alert("Failed to send message");
+} finally {
+  setLoading(false);
+}
+
+
+};
+
+return ( <div className="space-y-6">
+
+
+  {/* HEADER */}
+  <div>
+    <h1 className="text-2xl font-bold text-slate-900">
+      Help & Support
+    </h1>
+    <p className="text-slate-500">
+      Need help? Contact us anytime.
+    </p>
+  </div>
+
+  {/* CONTACT */}
+  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+    <Card className="p-6 text-center space-y-4">
+      <Mail className="mx-auto text-indigo-600" size={28} />
+      <p className="text-sm">info@qodematrixtechsolutions.com</p>
+    </Card>
+
+    <Card className="p-6 text-center space-y-4">
+      <Phone className="mx-auto text-emerald-600" size={28} />
+      <p className="text-sm">+91 8199824069</p>
+    </Card>
+
+    <Card className="p-6 text-center space-y-4">
+      <MessageSquare className="mx-auto text-amber-600" size={28} />
+      <p className="text-sm">Live Chat Coming Soon</p>
+    </Card>
+
+  </div>
+
+  {/* SUPPORT FORM */}
+  <Card className="p-6 space-y-4">
+    <h3 className="font-semibold">Send us a message</h3>
+
+    <Input
+      placeholder="Describe your issue..."
+      value={message}
+      onChange={(e) => setMessage(e.target.value)}
+    />
+
+    <Button onClick={sendMessage} isLoading={loading}>
+      Send Message
+    </Button>
+  </Card>
+
+  {/* FAQ */}
+  <Card title="FAQs">
+    <div className="space-y-4">
+      {faqs.map((faq) => (
+        <div key={faq._id}>
+          <h4 className="font-semibold">{faq.question}</h4>
+          <p className="text-sm text-slate-500">
+            {faq.answer}
+          </p>
+        </div>
+      ))}
     </div>
-  );
+  </Card>
+
+  {/* DOCS */}
+  <Card title="Documentation">
+    <div className="space-y-3">
+      {docs.map((doc) => (
+        <a
+          key={doc._id}
+          href={doc.link}
+          target="_blank"
+          className="flex justify-between items-center p-3 border rounded-lg hover:bg-slate-50"
+        >
+          <div className="flex gap-3 items-center">
+            <FileText size={18} />
+            <span>{doc.title}</span>
+          </div>
+          <ExternalLink size={14} />
+        </a>
+      ))}
+    </div>
+  </Card>
+
+</div>
+
+
+);
 };

@@ -1,11 +1,39 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { User, Bell, Shield, Globe, LogOut } from 'lucide-react';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { useAuthStore } from '../../store/authStore';
+import axios from 'axios'; // Ensure axios is installed
 
 export const SettingsPage = () => {
   const { user, logout } = useAuthStore();
+  const [name, setName] = useState(user?.name || '');
+  const [loading, setLoading] = useState(false);
+
+  // 1. Connects to your backend's Profile Update logic
+  const handleUpdateProfile = async () => {
+    setLoading(true);
+    try {
+      // Logic would go to a route like /api/auth/profile (if implemented)
+      // or student/teacher update route based on user.role
+      await axios.put(`/api/${user?.role}s/${user?.id}`, { name });
+      alert("Profile updated successfully!");
+    } catch (error) {
+      console.error("Update failed", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 2. Connects to your passwordRoutes.js -> forgot-password
+  const handlePasswordUpdate = async () => {
+    try {
+      await axios.post('/api/password/forgot-password', { email: user?.email });
+      alert("A reset link has been sent to your email: " + user?.email);
+    } catch (error) {
+      alert("Error sending reset email.");
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -20,7 +48,7 @@ export const SettingsPage = () => {
             <div className="space-y-4">
               <div className="flex items-center gap-6 pb-6 border-b border-slate-100">
                 <div className="h-20 w-20 rounded-full bg-indigo-500 flex items-center justify-center text-white text-2xl font-bold">
-                  {user?.name.charAt(0)}
+                  {user?.name?.charAt(0)}
                 </div>
                 <div>
                   <Button variant="outline" size="sm">Change Avatar</Button>
@@ -33,19 +61,26 @@ export const SettingsPage = () => {
                   <label className="text-xs font-semibold text-slate-500 uppercase">Full Name</label>
                   <input 
                     className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    defaultValue={user?.name}
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
                   />
                 </div>
                 <div className="space-y-1">
                   <label className="text-xs font-semibold text-slate-500 uppercase">Email Address</label>
                   <input 
-                    className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-slate-50 text-slate-500 cursor-not-allowed"
                     defaultValue={user?.email}
                     disabled
                   />
                 </div>
               </div>
-              <Button className="mt-4">Save Changes</Button>
+              <Button 
+                className="mt-4" 
+                onClick={handleUpdateProfile}
+                disabled={loading}
+              >
+                {loading ? "Saving..." : "Save Changes"}
+              </Button>
             </div>
           </Card>
 
@@ -69,7 +104,8 @@ export const SettingsPage = () => {
                     <p className="text-xs text-slate-500">Update your account password regularly.</p>
                   </div>
                 </div>
-                <Button variant="outline" size="sm">Update</Button>
+                {/* Triggering your backend password reset flow */}
+                <Button variant="outline" size="sm" onClick={handlePasswordUpdate}>Update</Button>
               </div>
             </div>
           </Card>
@@ -98,7 +134,7 @@ export const SettingsPage = () => {
           <Card className="bg-red-50 border-red-100">
             <div className="space-y-4">
               <h3 className="text-sm font-bold text-red-900">Danger Zone</h3>
-              <p className="text-xs text-red-700">Once you delete your account, there is no going back. Please be certain.</p>
+              <p className="text-xs text-red-700">Once you delete your account, there is no going back.</p>
               <Button variant="outline" className="w-full border-red-200 text-red-600 hover:bg-red-100">Delete Account</Button>
             </div>
           </Card>

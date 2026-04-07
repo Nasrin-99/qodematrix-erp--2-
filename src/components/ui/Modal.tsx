@@ -18,7 +18,8 @@ export const Modal = ({ isOpen, onClose, title, children, footer, size = 'md' }:
     sm: 'max-w-md',
     md: 'max-w-lg',
     lg: 'max-w-2xl',
-    xl: 'max-w-4xl',
+    xl: 'max-w-6xl',
+    
   };
 
   return (
@@ -47,7 +48,7 @@ export const Modal = ({ isOpen, onClose, title, children, footer, size = 'md' }:
                 <X className="h-4 w-4" />
               </Button>
             </div>
-            <div className="px-6 py-6 max-h-[70vh] overflow-y-auto">
+            <div className="px-6 py-6 max-h-[85vh] overflow-y-auto">
               {children}
             </div>
             {footer && (

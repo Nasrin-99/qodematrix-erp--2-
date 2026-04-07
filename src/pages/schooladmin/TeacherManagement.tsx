@@ -1,104 +1,308 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Plus, 
-  Search, 
-  Edit2, 
-  Trash2, 
-  Mail,
-  Phone,
-  BookOpen
-} from 'lucide-react';
-import { Card } from '../../components/ui/Card';
-import { Button } from '../../components/ui/Button';
-import { Input } from '../../components/ui/Input';
-import { Table, TableRow, TableCell } from '../../components/ui/Table';
-import { Badge } from '../../components/ui/Badge';
-import { LoadingSpinner } from '../../components/ui/LoadingSpinner';
+import { Plus, Trash2 } from 'lucide-react';
 
-import { teacherService } from '../../api/services';
+import { teacherService, classService,assignTeacher  } from '../../api/services';
+import { RoutineSelector } from "../schooladmin/RoutineSelector";
+
 
 export const TeacherManagement = () => {
+
   const [teachers, setTeachers] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [classList, setClassList] = useState<any[]>([]);
+  const [showModal, setShowModal] = useState(false);
+
+  const [name, setName] = useState("");
+  const [experience, setExperience] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+
+  const [selectedClass, setSelectedClass] = useState<any>(null);
+  const [selectedSlots, setSelectedSlots] = useState<any[]>([]);
+  const [assignments, setAssignments] = useState<any[]>([]);
+
+  // ================= FETCH =================
+  const fetchTeachers = async () => {
+    const res = await teacherService.getAll();
+    console.log("TEACHERS:", res);
+    setTeachers(res.data || []);
+  };
+
+  const fetchClasses = async () => {
+    const res = await classService.getAll();
+    setClassList(res || []);
+  };
 
   useEffect(() => {
-    teacherService.getAll().then(data => {
-      setTeachers(data);
-      setIsLoading(false);
-    });
+    fetchTeachers();
+    fetchClasses();
   }, []);
 
+  // ================= CREATE =================
+  const handleCreateTeacher = async () => {
+  try {
+
+    console.log("🔥 FINAL ASSIGNMENTS:", assignments);
+    const res = await teacherService.create({
+      name,
+      experience,
+      email,
+      phone,
+      assignments,
+      schoolId: localStorage.getItem("schoolId")
+    });
+
+    console.log("🔥 SENDING DATA:", res);
+
+    const teacherId = res.data._id;
+
+
+
+      console.log("✅ TEACHER CREATED:", teacherId);
+
+    // 🔥 ASSIGN TEACHER TO CLASS ROUTINE
+    for (const a of assignments) {
+      for (const slot of a.slots) {
+
+         console.log("🔥 ASSIGN CALL:", {
+          classId: a.classId,
+          day: slot.day,
+          time: slot.time,
+          subject: slot.subject,
+          teacherId
+        });
+
+
+        await assignTeacher({
+          classId: a.classId,
+          day: slot.day,
+          time: slot.time,
+          subject: slot.subject, // ✅ VERY IMPORTANT
+          teacherId
+        });
+
+      }
+    }
+
+    alert("Teacher + Assignment Done ✅");
+
+    setShowModal(false);
+    setName("");
+    setExperience("");
+    setEmail("");
+    setPhone("");
+    setAssignments([]);
+
+    fetchTeachers();
+
+  } catch (err) {
+    console.log(err);
+    alert("Error ❌");
+  }
+};
+  // ================= CLASS SELECT =================
+  const handleClassSelect = (classId: string) => {
+    const cls = classList.find((c: any) => c._id === classId);
+
+    console.log("🔥 SELECTED CLASS:", cls);
+    setSelectedClass(cls);
+    setSelectedSlots([]);
+  };
+
+  // ================= ADD CLASS ASSIGNMENT =================
+const handleAddClassAssignment = () => {
+  if (!selectedClass || selectedSlots.length === 0) return;
+
+  console.log("🔥 SELECTED SLOTS:", selectedSlots);
+
+  setAssignments((prev) => [
+    ...prev,
+    {
+      classId: selectedClass._id,
+      name: selectedClass.name,
+      section: selectedClass.section,
+      slots: selectedSlots
+    }
+  ]);
+
+  setSelectedSlots([]);
+};
+
+  // ================= DELETE =================
+  const handleDelete = async (id: string) => {
+    if (!confirm("Delete teacher?")) return;
+    await teacherService.delete(id);
+    fetchTeachers();
+  };
+
+  // ================= UI =================
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+
+      {/* HEADER */}
+      <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Teacher Management</h1>
-          <p className="text-slate-500">Manage school faculty and subject assignments.</p>
+          <h2 className="text-2xl font-bold">Staff Faculty</h2>
+          <p className="text-sm text-slate-500">Manage teachers</p>
         </div>
-        <Button size="sm" className="gap-2">
+
+        <button
+          onClick={() => setShowModal(true)}
+          className="bg-indigo-600 text-white px-4 py-2 rounded-lg flex gap-2"
+        >
           <Plus size={16} /> Add Teacher
-        </Button>
+        </button>
       </div>
 
-      <Card className="p-0 overflow-hidden">
-        <div className="p-4 border-b border-slate-100 flex gap-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-            <Input placeholder="Search teachers..." className="pl-10" />
+      {/* CARD GRID */}
+      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+
+        {teachers.map((t) => (
+          <div key={t._id} className="bg-white p-6 rounded-xl shadow border relative">
+
+            {/* DELETE */}
+            <button
+              onClick={() => handleDelete(t._id)}
+              className="absolute top-3 right-3 text-red-400"
+            >
+              <Trash2 size={16} />
+            </button>
+
+            {/* AVATAR */}
+            <div className="w-20 h-20 bg-indigo-100 rounded-full flex items-center justify-center text-xl font-bold mx-auto">
+              {t.name?.charAt(0)}
+            </div>
+
+            {/* NAME */}
+            <h3 className="text-center font-bold mt-3">{t.name}</h3>
+
+            {/* EXPERIENCE */}
+            <div className="text-center text-sm mt-2 text-slate-500">
+              {t.experience}
+            </div>
+
+            {/* CONTACT */}
+            <div className="mt-3 text-center text-xs">
+              <p>{t.email}</p>
+              <p>{t.phone}</p>
+            </div>
+
+            {/* ASSIGNMENTS */}
+            <div className="mt-4 text-xs text-slate-600">
+              {t.assignments?.map((a: any, i: number) => (
+                <div key={i} className="mb-2">
+                  <p className="font-semibold text-indigo-600">
+                    {a.name}-{a.section}
+                  </p>
+
+                  {a.slots?.map((s: any, j: number) => (
+                    <p key={j}>
+                      {s.day} {s.time} → {s.subject}
+                    </p>
+                  ))}
+                </div>
+              ))}
+            </div>
+
+          </div>
+        ))}
+
+      </div>
+
+      {/* MODAL */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center">
+
+          <div className="bg-white p-6 rounded-xl w-[500px] space-y-4">
+
+            <h2 className="font-bold text-lg">Add Teacher</h2>
+
+            {/* BASIC INPUT */}
+            <input
+              className="w-full border p-2 rounded"
+              placeholder="Name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+
+            <input
+              className="w-full border p-2 rounded"
+              placeholder="Experience"
+              value={experience}
+              onChange={(e) => setExperience(e.target.value)}
+            />
+
+            <input
+              className="w-full border p-2 rounded"
+              placeholder="Email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+
+            <input
+              className="w-full border p-2 rounded"
+              placeholder="Phone"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+            />
+
+            {/* CLASS SELECT */}
+            <select
+              className="border p-2 w-full"
+              onChange={(e) => handleClassSelect(e.target.value)}
+            >
+              <option>Select Class</option>
+              {classList.map((c) => (
+                <option key={c._id} value={c._id}>
+                  {c.name}-{c.section}
+                </option>
+              ))}
+            </select>
+
+            {/* ROUTINE SELECTOR */}
+            {selectedClass && (
+              <RoutineSelector
+                routine={selectedClass.routine}
+                selectedSlots={selectedSlots}
+                setSelectedSlots={setSelectedSlots}
+              />
+            )}
+
+            {/* ADD CLASS */}
+            <button
+              onClick={handleAddClassAssignment}
+              className="text-indigo-600 text-sm"
+            >
+              + Add Class Assignment
+            </button>
+
+            {/* SHOW ADDED */}
+            {assignments.map((a, i) => (
+              <div key={i} className="bg-gray-100 p-2 rounded text-xs">
+                {a.name}-{a.section} ({a.slots.length} slots)
+              </div>
+            ))}
+
+            {/* ACTION */}
+            <div className="flex gap-2">
+              <button
+                onClick={handleCreateTeacher}
+                className="bg-indigo-600 text-white px-4 py-2 rounded"
+              >
+                Create
+              </button>
+
+              <button
+                onClick={() => setShowModal(false)}
+                className="border px-4 py-2 rounded"
+              >
+                Cancel
+              </button>
+            </div>
+
           </div>
         </div>
+      )}
 
-        {isLoading ? (
-          <LoadingSpinner />
-        ) : (
-          <Table headers={['Teacher', 'Subject', 'Assigned Classes', 'Contact', 'Status', 'Actions']}>
-            {teachers.map((teacher) => (
-              <TableRow key={teacher.id}>
-                <TableCell>
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold">
-                      {teacher.name.split(' ').pop()?.charAt(0)}
-                    </div>
-                    <div>
-                      <p className="font-medium text-slate-900">{teacher.name}</p>
-                      <p className="text-[10px] text-slate-400 font-mono">{teacher.id}</p>
-                    </div>
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <div className="flex items-center gap-2">
-                    <BookOpen size={14} className="text-slate-400" />
-                    <span>{teacher.subject}</span>
-                  </div>
-                </TableCell>
-                <TableCell>{teacher.classes}</TableCell>
-                <TableCell>
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2 text-xs text-slate-500">
-                      <Mail size={12} /> {teacher.email}
-                    </div>
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <Badge variant={teacher.status === 'Active' ? 'success' : 'warning'}>
-                    {teacher.status}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  <div className="flex items-center gap-1">
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                      <Edit2 size={16} />
-                    </Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500">
-                      <Trash2 size={16} />
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
-          </Table>
-        )}
-      </Card>
     </div>
   );
 };

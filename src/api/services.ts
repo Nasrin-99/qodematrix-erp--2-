@@ -1,97 +1,369 @@
+import axios from "axios";
+import { useAuthStore } from "../store/authStore";
 
-import { UserRole } from '../store/authStore';
+// =========================
+// ✅ BASE URL
+// =========================
+const BASE_URL = import.meta.env.VITE_API_URL;
 
+const API = axios.create({
+  baseURL: BASE_URL,
+});
+
+// =========================
+// 🔐 Attach token automatically
+// =========================
+API.interceptors.request.use((config) => {
+  const token = localStorage.getItem("token");
+
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+
+  return config;
+});
+
+// =========================
+// 🔐 AUTH APIs
+// =========================
 export const authService = {
-  login: async (credentials: any) => {
-    // Mock login logic
-    const { email } = credentials;
-    let role: UserRole = 'student';
-    if (email.includes('superadmin')) role = 'superadmin';
-    else if (email.includes('admin')) role = 'schooladmin';
-    else if (email.includes('teacher')) role = 'teacher';
-    else if (email.includes('parent')) role = 'parent';
+  login: async (data: { email: string; password: string }) => {
+    const res = await axios.post(
+      `${BASE_URL}/auth/login`,
+      data
+    );
+    return res.data;
+  },
 
-    return {
-      user: {
-        id: '1',
-        name: email.split('@')[0].charAt(0).toUpperCase() + email.split('@')[0].slice(1),
-        email,
-        role,
-      },
-      token: 'mock-jwt-token',
-    };
+  register: async (data: any) => {
+    const res = await axios.post(`${BASE_URL}/auth/register`, data);
+    return res.data;
   },
 };
 
-export const schoolService = {
-  getAll: async () => {
-    return [
-      { id: '1', name: 'Greenwood High School', location: 'New York, NY', plan: 'Premium', expiryDate: '2025-12-31', status: 'Active' },
-      { id: '2', name: 'Riverside Academy', location: 'Chicago, IL', plan: 'Standard', expiryDate: '2025-06-30', status: 'Active' },
-    ];
-  },
-  create: async (data: any) => {
-    return { id: Math.random().toString(36).substr(2, 9), ...data, status: 'Active' };
+// =========================
+// 🚪 LOGOUT
+// =========================
+export const logoutUser = () => {
+  const { logout } = useAuthStore.getState();
+  logout();
+};
+
+// =========================
+// 🔔 NOTIFICATIONS
+// =========================
+export const getNotifications = async () => {
+  const res = await API.get("/notices");
+  return res.data;
+};
+
+// =========================
+// 👤 PROFILE APIs
+// =========================
+export const profileService = {
+  getProfile: async () => {
+    const res = await API.get("/auth/profile");
+    return res.data;
   },
 };
 
+// =========================
+// 📂 SIDEBAR MENU
+// =========================
+export const getSidebarMenu = async () => {
+  const res = await API.get("/menu");
+  return res.data;
+};
+
+// =========================
+// 👨‍🎓 STUDENT APIs
+// =========================
 export const studentService = {
   getAll: async () => {
-    return [
-      { id: 'STU001', name: 'Alex Johnson', class: '10-A', parent: 'Robert Johnson', phone: '8199824069', status: 'Active' },
-      { id: 'STU002', name: 'Sarah Miller', class: '8-B', parent: 'David Miller', phone: '8199824069', status: 'Active' },
-    ];
+    const res = await API.get("/students");
+    return res.data;
   },
+  getByClass: async (classId: string) => {
+    const res = await API.get(`/students/class/${classId}`);
+    return res.data;
+  },
+
   create: async (data: any) => {
-    return { id: 'STU' + Math.floor(Math.random() * 1000), ...data, status: 'Active' };
+    const res = await API.post("/students", data);
+    return res.data;
+  },
+
+  update: async (id: string, data: any) => {
+    const res = await API.put(`/students/${id}`, data);
+    return res.data;
+  },
+
+  delete: async (id: string) => {
+    const res = await API.delete(`/students/${id}`);
+    return res.data;
   },
 };
 
+// =========================
+// 👩‍🏫 TEACHER APIs (IMPORTANT 🔥)
+// =========================
 export const teacherService = {
   getAll: async () => {
-    return [
-      { id: 'TCH001', name: 'Dr. Robert Smith', subject: 'Mathematics', classes: '10-A, 10-B', email: 'robert.s@school.com', status: 'Active' },
-      { id: 'TCH002', name: 'Prof. Sarah Connor', subject: 'Physics', classes: '12-A, 12-C', email: 'sarah.c@school.com', status: 'Active' },
-    ];
+    const res = await API.get("/teachers");
+    return res.data;
   },
+
+  create: async (data: any) => {
+    const res = await API.post("/teachers", data);
+    return res.data;
+  },
+
+  // 🔥 DELETE (MAIN FIX)
+  delete: async (id: string) => {
+    const res = await API.delete(`/teachers/${id}`);
+    return res.data;
+  },
+
+  update: async (id: string, data: any) => {
+    const res = await API.put(`/teachers/${id}`, data);
+    return res.data;
+  },
+  getMyClasses: async () => {
+    const res = await API.get("/teacher/my-classes");
+    return res.data.data;
+  },
+  // 🔥 STUDENTS BY CLASS
+  getStudentsByClass: async (classId: string) => {
+    const res = await API.get(`/students/class/${classId}`);
+    return res.data.data;
+  },
+
+  // 🔥 MARK ATTENDANCE
+  markAttendance: async (data: any) => {
+    const res = await API.post("/attendance", data);
+    return res.data;
+  }
 };
 
-export const classService = {
+// =========================
+// 🏫 SCHOOL APIs
+// =========================
+export const schoolService = {
   getAll: async () => {
-    return [
-      { id: 'CLS001', name: '10-A', teacher: 'Dr. Robert Smith', students: 32, room: 'A-101' },
-      { id: 'CLS002', name: '12-C', teacher: 'Prof. Sarah Connor', students: 28, room: 'C-304' },
-    ];
+    const res = await API.get("/schools");
+    return res.data;
+  },
+
+  create: async (data: any) => {
+    const res = await API.post("/schools", data);
+    return res.data;
+  },
+
+  update: async (id: string, data: any) => {
+    const res = await API.put(`/schools/${id}`, data);
+    return res.data;
+  },
+
+  delete: async (id: string) => {
+    const res = await API.delete(`/schools/${id}`);
+    return res.data;
   },
 };
 
-export const attendanceService = {
+// =========================
+// 📊 DASHBOARD APIs
+// =========================
+export const dashboardService = {
   getStats: async () => {
-    return { present: 85, absent: 10, late: 5 };
+    const res = await API.get("/dashboard/stats");
+    return res.data;
+  },
+
+  getAttendanceStats: async () => {
+    const res = await API.get("/dashboard/attendance");
+    return res.data;
+  },
+
+  getFeeStats: async () => {
+    const res = await API.get("/dashboard/fees");
+    return res.data;
   },
 };
 
-export const feeService = {
-  getStats: async () => {
-    return { collected: 125000, pending: 45000, overdue: 12000 };
-  },
-};
 
+
+// =========================
+// 📢 NOTICE APIs
+// =========================
 export const noticeService = {
   getAll: async () => {
-    return [
-      { id: '1', title: 'Annual Sports Day', content: 'The annual sports day will be held on March 15th.', date: '2024-03-01', type: 'Event' },
-      { id: '2', title: 'Exam Schedule Released', content: 'Final exam schedule for all classes is now available.', date: '2024-02-28', type: 'Academic' },
-    ];
+    const res = await API.get("/notices");
+    return res.data;
+  },
+
+  create: async (data: any) => {
+    const res = await API.post("/notices", data);
+    return res.data;
   },
 };
 
+
+export const getNotices = async () => {
+  const res = await API.get("/notices");
+  return res.data;
+};
+
+// =========================
+// 🏫 CLASS APIs
+// =========================
+export const classService = {
+  getAll: async () => {
+    const res = await API.get("/classes");
+    return res.data;
+  },
+
+  create: async (data: any) => {
+    const res = await API.post("/classes", data);
+    return res.data;
+  },
+
+  update: async (id: string, data: any) => {
+    const res = await API.put(`/classes/${id}`, data);
+    return res.data;
+  },
+
+  delete: async (id: string) => {
+    const res = await API.delete(`/classes/${id}`);
+    return res.data;
+  },
+
+
+  getMyRoutine: async () => {
+    const res = await API.get("/classes/my-routine");
+    return res.data;
+  },
+
+};
+
+export const getTodayAttendance = async () => {
+  const res = await fetch("/api/attendance/today");
+  return await res.json();
+};
+
+// =========================
+// 💳 SUBSCRIPTION APIs
+// =========================
 export const subscriptionService = {
-  getPlans: async () => {
-    return [
-      { id: '1', name: 'Basic', price: 49, features: ['Up to 100 students', 'Basic reporting', 'Email support'] },
-      { id: '2', name: 'Standard', price: 99, features: ['Up to 500 students', 'Advanced reporting', 'Priority support'] },
-      { id: '3', name: 'Premium', price: 199, features: ['Unlimited students', 'Custom reporting', '24/7 support'] },
-    ];
+  getAll: async () => {
+    const res = await API.get("/subscriptions");
+    return res.data;
+  },
+
+  create: async (data: any) => {
+    const res = await API.post("/subscriptions", data);
+    return res.data;
+  },
+
+  update: async (id: string, data: any) => {
+    const res = await API.put(`/subscriptions/${id}`, data);
+    return res.data;
+  },
+
+  delete: async (id: string) => {
+    const res = await API.delete(`/subscriptions/${id}`);
+    return res.data;
   },
 };
+
+//  get my classes
+export const getMyClasses = async () => {
+  const res = await API.get("/teachers/my-classes");
+  return res.data.data;   // 🔥 IMPORTANT
+};
+
+
+// ==============================
+// 🔥 ASSIGN TEACHER TO CLASS
+// ==============================
+export const assignTeacher = async (data: any) => {
+  const res = await API.post("/teacher/assign-class", data);
+  return res.data;
+};
+
+// ==============================
+// 🔥 GET TODAY SCHEDULE
+// ==============================
+export const getTodaySchedule = async () => {
+  const res = await API.get("/schedule/today");
+  return res.data;
+};
+
+export const getStudentClasses = async () => {
+  const res = await API.get("/student/classes");
+  return res.data;
+};
+
+export const assignTeacherToSlot = async (data: any) => {
+  const res = await API.post("/teacher/assign-slot", data);
+  return res.data;
+};
+
+
+// =========================
+// 📅 ATTENDANCE APIs (FINAL ✅)
+// =========================
+export const attendanceService = {
+
+  // =========================
+  // 👩‍🏫 TEACHER ATTENDANCE
+  // =========================
+  getTeacherAttendance: async () => {
+    const res = await API.get("/attendance/teacher");
+    return res.data;
+  },
+
+  updateTeacher: async (id: string, status: string) => {
+    const res = await API.put(`/attendance/teacher/${id}`, { status });
+    return res.data;
+  },
+
+  // =========================
+  // 👨‍🎓 STUDENT ATTENDANCE
+  // =========================
+
+  // 🔥 MARK (MAIN)
+  markStudent: async (data: any) => {
+    const res = await API.post("/attendance/student", data);
+    return res.data;
+  },
+
+  // 🔥 GET TODAY / HISTORY
+  getStudentAttendance: async (classId: string) => {
+    const res = await API.get(`/attendance/student/${classId}`);
+    return res.data;
+  },
+
+  // 🔥 HISTORY (GROUPED)
+  getStudentHistory: async (classId: string) => {
+    const res = await API.get(`/attendance/student-history/${classId}`);
+    return res.data.data;
+  },
+
+  // 🔥 UPDATE
+  updateStudent: async (id: string, status: string) => {
+    const res = await API.put(`/attendance/student/${id}`, { status });
+    return res.data;
+  },
+
+  // =========================
+  // 📊 STATS (OPTIONAL)
+  // =========================
+  getStats: async () => {
+    const res = await API.get("/dashboard/stats");
+    return res.data.attendance;
+  }
+
+};
+
+
+export default API;
