@@ -10,6 +10,10 @@ import { RoutineDialog } from "../common/RoutineDialog";
 import { studentService, teacherService } from '../../api/services';
 import { useParams, useNavigate } from "react-router-dom";
 
+
+const API_URL = import.meta.env.VITE_API_URL;
+
+
 export const TeacherStudentManagement = () => {
 
   const { id: selectedClassId } = useParams();
@@ -72,8 +76,7 @@ export const TeacherStudentManagement = () => {
 
       console.log("🔥 RECORDS:", records);
 
-      const res = await fetch("http://localhost:5000/api/attendance/student", {
-        method: "POST",
+     const res = await fetch(`${API_URL}/attendance/student`, {
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${localStorage.getItem("token")}`

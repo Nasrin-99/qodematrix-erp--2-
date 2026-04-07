@@ -9,6 +9,9 @@ import { Badge } from '../../components/ui/Badge';
 import { LoadingSpinner } from '../../components/ui/LoadingSpinner';
 import { useAuthStore } from '../../store/authStore';
 
+const API_URL = import.meta.env.VITE_API_URL;
+
+
 export const TransportManagement = () => {
   const { user } = useAuthStore();
   const [routes, setRoutes] = useState<any[]>([]);
@@ -24,7 +27,9 @@ export const TransportManagement = () => {
     setIsLoading(true);
     try {
       // Connecting to your backend dashboard or a specific transport endpoint
-      const response = await axios.get(`http://localhost:5000/api/schools/transport/${user?.schoolId}`);
+      const response = await axios.get(
+        `${API_URL}/schools/transport/${user?.schoolId}`
+      );
       setRoutes(response.data.data);
     } catch (error) {
       console.error("Error fetching transport data:", error);
@@ -36,7 +41,7 @@ export const TransportManagement = () => {
   };
 
   // Filter routes based on search input
-  const filteredRoutes = routes.filter(route => 
+  const filteredRoutes = routes.filter(route =>
     route.routeName.toLowerCase().includes(searchTerm.toLowerCase()) ||
     route.driver.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -65,9 +70,9 @@ export const TransportManagement = () => {
         <div className="p-4 border-b border-slate-100 flex gap-4">
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-            <Input 
-              placeholder="Search routes or drivers..." 
-              className="pl-10" 
+            <Input
+              placeholder="Search routes or drivers..."
+              className="pl-10"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />

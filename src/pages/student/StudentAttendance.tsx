@@ -14,6 +14,10 @@ export const StudentAttendance = () => {
   const [totalAbsent, setTotalAbsent] = useState(0);
   const [attendanceRate, setAttendanceRate] = useState(0);
 
+
+  const API_URL = import.meta.env.VITE_API_URL;
+
+
   useEffect(() => {
     fetchAttendance();
   }, []);
@@ -28,7 +32,7 @@ export const StudentAttendance = () => {
         return;
       }
 
-      const res = await fetch("http://localhost:5000/api/attendance/my", {
+      const res = await fetch(`${API_URL}/attendance/my`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
@@ -53,8 +57,8 @@ export const StudentAttendance = () => {
           item.status === "present"
             ? "Present"
             : item.status === "absent"
-            ? "Absent"
-            : "Late",
+              ? "Absent"
+              : "Late",
         time: item.slot || "-"
       }));
 
@@ -142,8 +146,8 @@ export const StudentAttendance = () => {
                         record.status === 'Present'
                           ? 'success'
                           : record.status === 'Absent'
-                          ? 'danger'
-                          : 'warning'
+                            ? 'danger'
+                            : 'warning'
                       }
                     >
                       {record.status}

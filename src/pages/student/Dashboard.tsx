@@ -3,11 +3,15 @@ import { BookOpen, Calendar, Award } from 'lucide-react';
 import { Card } from '../../components/ui/Card';
 import { getStudentClasses } from "../../api/services";
 
+const API_URL = import.meta.env.VITE_API_URL;
+
 export const StudentDashboard = () => {
   const [classes, setClasses] = useState<any[]>([]);
   const [teachers, setTeachers] = useState<any[]>([]);
   const [attendanceRate, setAttendanceRate] = useState(0); // 🔥 NEW
 
+
+  
   // 👉 Get Today Day
   const getToday = () => {
     const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
@@ -63,7 +67,8 @@ export const StudentDashboard = () => {
 
   const fetchAttendanceStats = async () => {
     try {
-      const res = await fetch("http://localhost:5000/api/attendance/my", {
+         const res = await fetch(`${API_URL}/attendance/my`, {
+
         headers: {
           Authorization: `Bearer ${localStorage.getItem("token")}`
         }

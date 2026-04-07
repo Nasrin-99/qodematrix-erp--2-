@@ -77,7 +77,7 @@ export const Sidebar = ({
           return;
         }
 
-        const roleMenu = sidebarConfig[role] || [];
+        const roleMenu = sidebarConfig[role as keyof typeof sidebarConfig] || [];
         setMenuItems(
           roleMenu.map((item: any) => ({
             title: item.name,

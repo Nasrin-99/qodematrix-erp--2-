@@ -5,6 +5,8 @@ import { Card } from "../../components/ui/Card";
 import { Badge } from "../../components/ui/Badge";
 import { Megaphone, Phone, Mail, Info } from "lucide-react";
 
+const API_URL = import.meta.env.VITE_API_URL;
+
 const HelpSupport = () => {
   const [notices, setNotices] = useState<any[]>([]);
 
@@ -14,7 +16,7 @@ const HelpSupport = () => {
 
   const fetchNotices = async () => {
     try {
-      const res = await axios.get("http://localhost:5000/api/notices", {
+       const res = await axios.get(`${API_URL}/notices`, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
